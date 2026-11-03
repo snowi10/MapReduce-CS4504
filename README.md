@@ -1,4 +1,4 @@
 # MapReduce-CS4504
-A demonstration of MapReduce using the Apache Hadoop framework for a class project in Parallel and Distributed Computing.
+A demonstration of MapReduce in C using pthreads. 
 ## Resources
-https://hadoop.apache.org/docs/stable1/mapred_tutorial.html
+https://www.baeldung.com/cs/mapreduce-algorithm
