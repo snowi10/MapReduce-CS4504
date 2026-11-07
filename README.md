@@ -5,4 +5,5 @@ A demonstration of MapReduce for solving the WordCount problem using pthreads in
 - https://www.baeldung.com/cs/mapreduce-algorithm
 - https://www.geeksforgeeks.org/software-engineering/mapreduce-architecture/
 - https://en.wikipedia.org/wiki/MapReduce
+
 ![Alt text](https://i.sstatic.net/aIGRQ.png)
