@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "linked_list.h"
 
 list_node* create_node(void *value) {
@@ -19,13 +20,12 @@ list_node* add_to_list(list_node *list, void *value) {
         head = create_node(value);
         return head;
     }
-    else {
-        while (list->next != NULL) {
-            list = list->next;
-        }
 
-        list->next = create_node(value);
+    while (list->next != NULL) {
+        list = list->next;
     }
+
+    list->next = create_node(value);
 
     return head;
 }
