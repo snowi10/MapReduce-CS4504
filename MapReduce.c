@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <locale.h>
+#include <stdbool.h>
 #include "linked_list.h"
 
 #define MAX_FILE_SIZE 2048
@@ -12,7 +13,7 @@
 #define INTERM_VALS_DEST "interm_vals.txt"
 #define REDUCE_DEST "reduce_output.txt"
 
-const int KEY_VAL = 1;
+const int KEY_VAL = 1000;
 
 FILE *fp;
 char *content;
@@ -47,14 +48,17 @@ void readf(char *file_name, char **dest, size_t *dest_size) {
     // Read file and store in buffer.
     char buff[MAX_FILE_SIZE];
     int char_num = fread(buff, sizeof(char), MAX_FILE_SIZE, fp);
-    assert(char_num <= MAX_FILE_SIZE && "ERROR: File size is too large.");
+    assert(char_num + 1 <= MAX_FILE_SIZE && "ERROR: File size is too large.");
 
-    // Copy content of buffer to destination variable.
-    *dest = malloc(sizeof(char) * char_num);
+    char_num += 1;
+    buff[char_num] = '\0';
+
+    //Copy content of buffer to destination variable.
+    *dest = malloc(sizeof(char) * (char_num + 1));
     assert(*dest != NULL && "ERROR: Failed to allocate memory.");
     strcpy(*dest, buff);
     *dest_size = char_num;
-
+    
     fclose(fp);
 }
 
@@ -63,7 +67,7 @@ int partition(char *term, size_t term_size) {
 
     // Get positive integer value of term.
     for (int i = 0; i < term_size; i++) {
-        term_id = (unsigned int)term[i];
+        term_id += (unsigned int)term[i];
     }
 
     // Assign term to reducer using modulo method.
@@ -82,7 +86,7 @@ void map_func(list_node **buff) {
         assert(term != NULL && "ERROR: Failed to allocate memory.");
 
         // Build term from content.
-        while (!isspace(content[cont_pos]) && !iscntrl(content[cont_pos])) {
+        while (!isspace(content[cont_pos]) && !iscntrl(content[cont_pos]) && cont_pos < cont_size) {
             term[term_pos] = content[cont_pos]; // Copy characters to build terms. 
 
             term_pos++;
@@ -164,11 +168,11 @@ void shuffle_sort(int thread_id, list_node** redkv_list) {
     size_t val_size;
 
     // Store thread ID, term, term size, value and value size from
-    // intermediate-values file to variables.
+    // intermediate-values file to variables for observation.
     while(fscanf(fp, "%d %s %llu %d %llu", &tred_id, &term, &term_size, val, &val_size) == 5) {
         // Identify if term belongs to the calling reducer.
         if (tred_id == thread_id) {
-            // Add term and its value to the calling reducer's list.
+            // Add term and its value to the calling reducer's list if the list is empty.
             if (*redkv_list == NULL) {
                 key_value *tvalues_list = malloc(sizeof(key_value));
                 assert(tvalues_list != NULL && "ERROR: Failed to allocate memory.");
@@ -182,13 +186,47 @@ void shuffle_sort(int thread_id, list_node** redkv_list) {
                 tvalues_list->value = create_node(val);
                 tvalues_list->value_size = 1;
 
-                //printf("%s %llu %d %llu\n", tvalues_list->key, tvalues_list->key_size, *((int *)((list_node *)tvalues_list->value)->data), tvalues_list->value_size); 
-
                 *redkv_list = create_node(tvalues_list);
             }
             else {
-                // TODO: If the calling reducer's list is not empty, add the term and its value to the list.
-                // TODO: OR if it is already in the list, only add the value to the list of the corresponding term.
+                list_node *curr = *redkv_list;
+                bool is_in_list = false;
+
+                // Identify if the term already exists in the calling reducer's list.
+                while (curr != NULL) {
+                    char *curr_term = (char *)((key_value *)curr->data)->key;
+                    list_node *val_list = (list_node *)((key_value *)curr->data)->value;
+
+                    // If the term already exists in the calling reducer's list,
+                    // only add the value to the current term's list of values.
+                    if (strcmp(curr_term, term) == 0) {
+                        is_in_list = true;
+                        val_list = add_to_list(val_list, val);
+                        ((key_value *)curr->data)->value_size += 1; 
+                        break;
+                    }
+                    else {
+                        curr = curr->next;
+                    }
+                }
+
+                // Add term and its value to the end of the calling reducer's list
+                // if it does not yet exist in the list.
+                if (is_in_list == false) {
+                    key_value *tvalues_list = malloc(sizeof(key_value));
+                    assert(tvalues_list != NULL && "ERROR: Failed to allocate memory.");
+                    tvalues_list->key = malloc(sizeof(char) * term_size);
+                    assert(tvalues_list != NULL && "ERROR: Failed to allocate memory.");
+                    tvalues_list->value = malloc(sizeof(list_node));
+                    assert(tvalues_list->value != NULL && "ERROR: Failed to allocate memory.");
+
+                    strcpy(tvalues_list->key, term);
+                    tvalues_list->key_size = term_size;
+                    tvalues_list->value = create_node(val);
+                    tvalues_list->value_size = 1;
+
+                    *redkv_list = add_to_list(*redkv_list, tvalues_list);
+                }
             }
         }
 
@@ -197,7 +235,7 @@ void shuffle_sort(int thread_id, list_node** redkv_list) {
     fclose(fp);
 }
 
-void reduce_func() {
+void reduce_func(char *term, list_node *values) {
 
 }
 
@@ -205,7 +243,34 @@ void reduce_task(int thread_id) {
     list_node *redkv_list = NULL;
     shuffle_sort(thread_id, &redkv_list);
 
+    list_node *curr_kv = redkv_list;
+    while (curr_kv != NULL) {
+        key_value *curr_kvterm = ((key_value *)curr_kv->data);
+        printf("%s ", (char *)curr_kvterm->key);
+        printf("%llu ", curr_kvterm->key_size);
+        printf("%llu; Values: ", curr_kvterm->value_size);
+
+        list_node *curr_val = curr_kvterm->value;
+        while (curr_val != NULL) {
+            printf("%d ", *(int *)curr_val->data);
+            curr_val = curr_val->next;
+        }
+        printf("\n");
+        curr_kv = curr_kv->next;
+    }
+
+
     // TODO: Free memory.
+    /*
+    list_node *del_list = redkv_list;
+    while (del_list != NULL) {
+        // Free list node (key-value pair of term and its list of terms)
+            // Free key (term)
+            // Free value (list of current term's values)
+                // Free list node (value) 
+    }
+    free(redkv_list);
+    */
 }
 
 int main(int argc, char *argv[]) {
@@ -215,7 +280,7 @@ int main(int argc, char *argv[]) {
 
     readf(argv[1], &content, &cont_size);
     map_task();
-    reduce_task(1);
+    reduce_task(0);
 
     free(content);
 
