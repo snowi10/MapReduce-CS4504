@@ -54,5 +54,6 @@ dkms.conf
 # debug information files
 *.dwo
 
-# Mapper output
+# MapReduce output files
 interm_vals.txt
+reduce_output.txt
