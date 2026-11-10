@@ -162,6 +162,7 @@ void reduce_task(int thread_id) {
     fclose(fp);
 
     // TODO: Free memory.
+
 }
 
 int partition(char *term, size_t term_size) {
@@ -189,7 +190,6 @@ void map_func(list_node **buff, int start, int end) {
         assert(term != NULL && "ERROR: Failed to allocate memory.");
 
         // Build term from content.
-        //while (!isspace(content[cont_pos]) && !iscntrl(content[cont_pos]) && cont_pos < cont_size - 1) {
         while (isprint(content[cont_pos]) && !isspace(content[cont_pos]) && cont_pos < cont_size - 1) {
             term[term_pos] = content[cont_pos]; // Copy characters to build terms. 
 
@@ -239,7 +239,7 @@ void map_task(int thread_id) {
     end_pos = floor(end_pos);
     start_pos = floor(start_pos);
 
-    // Move starting position if 
+    // Move starting position if it is in the middle of a word.
     while (start_pos != 0 && isprint(content[(int)start_pos - 1]) && !isspace(content[(int)start_pos - 1])) {
         start_pos++;
     }
