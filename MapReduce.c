@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <locale.h>
 #include <stdbool.h>
+#include <pthread.h>
 #include <math.h>
 #include "linked_list.h"
 
