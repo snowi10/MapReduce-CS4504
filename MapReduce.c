@@ -165,7 +165,7 @@ void reduce_task(int thread_id) {
 
     fclose(fp);
 
-    // TODO: Free memory.
+    // Free memory.
     list_node *del_node = redkv_list;
     while (del_node != NULL) {
 	    list_node *temp_node = del_node;
@@ -298,7 +298,7 @@ void map_task(int thread_id) {
 
     fclose(fp);
 
-    // Free buffer memory.
+    // Free memory.
     list_node *curr_node = loc_buff;
     while (curr_node != NULL) {
         list_node *temp = curr_node;
