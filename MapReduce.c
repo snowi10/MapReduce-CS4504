@@ -48,18 +48,20 @@ int find_num_digits(int num) {
     return num_digits;
 }
 
-key_value* create_term_kv (char *term, size_t term_size, int *val) {
+key_value* create_term_kv (char *term, size_t term_size, int val) {
     key_value *term_values = malloc(sizeof(key_value));
     assert(term_values != NULL && "ERROR: Failed to allocate memory.");
-    term_values->key = malloc(sizeof(char) * (term_size));
+    term_values->key = malloc(sizeof(char) * (term_size + 1));
     assert(term_values->key != NULL && "ERROR: Failed to allocate memory.");
-    term_values->value = malloc(sizeof(list_node));
-    assert(term_values->value != NULL && "ERROR: Failed to allocate memory.");
+    term_values->value = NULL;
+    int *v = malloc(sizeof(int));
+    assert(v != NULL && "ERROR: Failed to allocate memory.");
 
+    memcpy(v, &val, (sizeof(int)));
     strcpy(term_values->key, term);
     term_values->key_size = term_size;
-    term_values->value = create_node(val);
-    term_values->value_size = 1;
+    term_values->value = create_node(v);
+    term_values->value_size = find_num_digits(val);
 
     return term_values;
 }
@@ -70,13 +72,12 @@ void shuffle_sort(int thread_id, list_node** redkv_list) {
     int tred_id;
     char term[MAX_TERM_SIZE];
     size_t term_size;
-    int *val = malloc(sizeof(int));
-    assert(val != NULL && "ERROR: Failed to allocate memory.");
+    int val; 
     size_t val_size;
 
     // Store thread ID, term, term size, value and value size from
     // intermediate-values file to variables for observation.
-    while(fscanf(fp, "%d %s %llu %d %llu", &tred_id, &term, &term_size, val, &val_size) == 5) {
+    while(fscanf(fp, "%d %s %lu %d %lu", &tred_id, term, &term_size, &val, &val_size) == 5) {
         // Identify if term belongs to the calling reducer.
         if (tred_id == thread_id) {
             // Add term and its value to the calling reducer's list if the list is empty.
@@ -99,7 +100,9 @@ void shuffle_sort(int thread_id, list_node** redkv_list) {
                     // reducer's list.
                     if (strcmp(curr_term, term) == 0) {
                         is_in_list = true;
-                        val_list = add_to_list(val_list, val);
+			int *v = malloc(sizeof(int));
+			memcpy(v, &val, sizeof(int));
+                        val_list = add_to_list(val_list, v);
                         ((key_value *)curr->data)->value_size += 1; 
                         break;
                     }
@@ -162,6 +165,28 @@ void reduce_task(int thread_id) {
     fclose(fp);
 
     // TODO: Free memory.
+    list_node *del_node = redkv_list;
+    while (del_node != NULL) {
+	    list_node *temp_node = del_node;
+	    del_node = del_node->next;
+
+	    key_value *del_kv = ((key_value *)temp_node->data);
+	    char *del_term = (char *)del_kv->key;
+	    free(del_term);
+		
+	    list_node *vals_list = (list_node *)del_kv->value;
+	    list_node *del_vals_list = vals_list;
+	    while (del_vals_list != NULL) {
+		    list_node *temp_vals = del_vals_list;
+		    del_vals_list = del_vals_list->next;
+
+		    free(temp_vals->data);
+	    }
+
+	    free_list(vals_list);
+	    free(del_kv);
+    }
+    free_list(redkv_list);
 
 }
 
@@ -186,7 +211,7 @@ void map_func(list_node **buff, int start, int end) {
     // Iterate through characters of content.
     while (cont_pos < end_pos) {
         int term_pos = 0;
-        char *term = malloc(sizeof(char) * MAX_TERM_SIZE);
+        char term[MAX_TERM_SIZE];
         assert(term != NULL && "ERROR: Failed to allocate memory.");
 
         // Build term from content.
@@ -207,8 +232,9 @@ void map_func(list_node **buff, int start, int end) {
             assert(pair != NULL && "ERROR: Failed to allocate memory");
             pair->value = malloc(sizeof(int));
             assert(pair->value != NULL && "ERROR: Failed to allocate memory.");
+	    pair->key = malloc(sizeof(char) * (term_pos + 1));
 
-            pair->key = term; // Term is the key.
+            strcpy((char *)pair->key, term); // Term is the key.
             pair->key_size = term_pos;
             memcpy((int *)pair->value, &KEY_VAL, sizeof(int)); // Value of each key.
             pair->value_size = find_num_digits(KEY_VAL);
@@ -262,9 +288,9 @@ void map_task(int thread_id) {
         // {character length of term} {value} {character length of value}".
         fprintf(fp, "%d ", reducer_id);
         fprintf(fp, "%s ", term);
-        fprintf(fp, "%llu ", term_size);
+        fprintf(fp, "%lu ", term_size);
         fprintf(fp, "%d ", value);
-        fprintf(fp, "%llu\n", value_size);
+        fprintf(fp, "%lu\n", value_size);
 
         del_pair = del_pair->next;
     } 
@@ -296,7 +322,7 @@ void readf(char *file_name, char **dest, size_t *dest_size) {
     buff[char_num] = '\0';
 
     // Copy content of buffer to destination variable.
-    *dest = malloc(sizeof(char) * (char_num));
+    *dest = malloc(sizeof(char) * char_num);
     assert(*dest != NULL && "ERROR: Failed to allocate memory.");
     strcpy(*dest, buff);
     *dest_size = char_num;
