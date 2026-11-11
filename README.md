@@ -58,11 +58,11 @@ A demonstration of a sequential MapReduce for solving the WordCount example.
 - The program is specific to the WordCount example and, therefore, only considers words as keys and the number 1 as values in which the operation on a key's list of values is a summation.
 - The program can only read data in text files assuming that it only contains ASCII characters.
 - The program is case-sensitive (i.e. "Dog" would be considered a different word/key than "dog").
-- Punctuation characters are not considered as their own unique keys if there are no spaces between the preceding or proceeding words that follow them (i.e., in the sentence, "This is a dog; the dog is cute.", ";" would be attached to the word "dog" and "." would be attached to the word "cute". Therefore, two of the resulting keys from this sentence would be "dog;" and "cute.").
-- No actual parallelization occurs within the program.
+- Punctuation characters are not considered as their own unique keys if there are no spaces between the preceding or proceeding words (i.e., in the sentence, "This is a dog; the dog is cute.", ";" would be attached to the word "dog" and "." would be attached to the word "cute". Therefore, two of the resulting keys from this sentence would be "dog;" and "cute.").
+- No real parallelization occurs within the program for the Map and Reduce functions.
 ## Future Implementations
-- Applying pthreads to parallelize the Map and Reduce functions.
-- Allowing more control over specifying keys and values, file type, and operations on the values.
+- Apply pthreads to parallelize the Map and Reduce functions.
+- Allow more control over specifying keys and values, file type, and operations on the values.
 ## Resources
 - https://hadoop.apache.org/docs/current/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html
 - https://www.baeldung.com/cs/mapreduce-algorithm
